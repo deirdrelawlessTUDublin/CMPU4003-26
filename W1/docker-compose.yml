@@ -1,0 +1,153 @@
+# ==============================================================
+# CMPU4003 - Advanced Databases
+# PostgreSQL + Redis Environment
+#
+# This Docker Compose file creates:
+#   1. PostgreSQL 18
+#   2. pgAdmin 4
+#   3. Redis
+#   4. Redis Insight
+#
+# Start:
+#   docker compose up -d
+#
+# Stop:
+#   docker compose down
+#
+# IMPORTANT:
+#   docker compose down
+#   preserves your data.
+#
+#   docker compose down -v
+#   DELETES all persistent volumes and resets the environment.
+# ==============================================================
+
+services:
+
+  # ============================================================
+  # PostgreSQL
+  # ============================================================
+  postgres:
+    image: postgres:18
+    container_name: cmpu4003-postgres
+    restart: unless-stopped
+
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: postgres
+
+    # Connect using:
+    #
+    #   Host:     localhost
+    #   Port:     5432
+    #   Database: postgres
+    #   Username: postgres
+    #   Password: postgres
+    #
+    ports:
+      - "5432:5432"
+
+    # Persistent PostgreSQL data.
+    volumes:
+      - postgres_data:/var/lib/postgresql
+
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+
+
+  # ============================================================
+  # pgAdmin 4
+  # ============================================================
+  pgadmin:
+    image: dpage/pgadmin4:9.17
+    container_name: cmpu4003-pgadmin
+    restart: unless-stopped
+
+    environment:
+      PGADMIN_DEFAULT_EMAIL: student@tudublin.ie
+      PGADMIN_DEFAULT_PASSWORD: postgres
+
+    # Access pgAdmin at:
+    #
+    #   http://localhost:5050
+    #
+    ports:
+      - "5050:80"
+
+    # Persistent pgAdmin settings.
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin
+
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+
+  # ============================================================
+  # Redis
+  # ============================================================
+  redis:
+    image: redis:8
+    container_name: cmpu4003-redis
+    restart: unless-stopped
+
+    # Connect using:
+    #
+    #   Host: localhost
+    #   Port: 6379
+    #
+    ports:
+      - "6379:6379"
+
+    # Enable Redis persistence.
+    command: redis-server --appendonly yes
+
+    # Persistent Redis data.
+    volumes:
+      - redis_data:/data
+
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 5s
+
+
+  # ============================================================
+  # Redis Insight
+  # ============================================================
+  redisinsight:
+    image: redis/redisinsight:latest
+    container_name: cmpu4003-redisinsight
+    restart: unless-stopped
+
+    # Access Redis Insight at:
+    #
+    #   http://localhost:5540
+    #
+    ports:
+      - "5540:5540"
+
+    # Persistent Redis Insight settings.
+    volumes:
+      - redisinsight_data:/data
+
+    depends_on:
+      redis:
+        condition: service_healthy
+
+
+# ==============================================================
+# Persistent Docker Volumes
+# ==============================================================
+volumes:
+  postgres_data:
+  pgadmin_data:
+  redis_data:
+  redisinsight_data:
